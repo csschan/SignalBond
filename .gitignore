@@ -30,8 +30,23 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.local
+.env.production
+
+# foundry
+/out/
+/cache_hardhat/
+/lib/
+/artifacts/
+
+# database
+*.db
+*.db-journal
+
+# generated
+/src/generated/
 
 # vercel
 .vercel
@@ -39,3 +54,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+

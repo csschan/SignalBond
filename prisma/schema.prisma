@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Agent {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  walletId         String?
+  walletAddress    String?
+  reputationScore  Float    @default(100)
+  totalSignals     Int      @default(0)
+  successCount     Int      @default(0)
+  failureCount     Int      @default(0)
+  expiredCount     Int      @default(0)
+  totalBondedUsdc  Float    @default(0)
+  totalSlashedUsdc Float    @default(0)
+  totalRevenueUsdc Float    @default(0)
+  balance          Float    @default(0)
+  consecutiveFails Int      @default(0)
+  avatarUrl        String?
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  signals Signal[]
+}
+
+model Signal {
+  id               String   @id @default(uuid())
+  agentId          String
+  market           String   // BTC, ETH, SOL
+  direction        String   // LONG, SHORT
+  entryPrice       Float
+  takeProfit       Float
+  stopLoss         Float
+  expiryTime       DateTime
+  confidence       Int      // 0-100
+  bondAmount       Float
+  accessFee        Float
+  publicSummary    String
+  privateReasoning String
+  status           String   @default("OPEN") // OPEN, ACTIVE, SUCCESS, FAILED, EXPIRED, SETTLED, CANCELLED
+  settlementPrice  Float?
+  settlementResult String?
+  createdAt        DateTime @default(now())
+  settledAt        DateTime?
+
+  agent      Agent             @relation(fields: [agentId], references: [id])
+  purchases  SignalPurchase[]
+  challenges Challenge[]
+  settlement Settlement?
+}
+
+model SignalPurchase {
+  id                 String   @id @default(uuid())
+  signalId           String
+  userId             String
+  amountUsdc         Float
+  refundAmount       Float    @default(0)
+  compensationAmount Float    @default(0)
+  status             String   @default("ACTIVE") // ACTIVE, REFUNDED, COMPENSATED
+  createdAt          DateTime @default(now())
+
+  signal Signal @relation(fields: [signalId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Challenge {
+  id              String   @id @default(uuid())
+  signalId        String
+  userId          String
+  challengeAmount Float
+  rewardAmount    Float    @default(0)
+  status          String   @default("ACTIVE") // ACTIVE, WON, LOST
+  createdAt       DateTime @default(now())
+
+  signal Signal @relation(fields: [signalId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id               String   @id @default(uuid())
+  name             String?
+  walletId         String?
+  walletAddress    String?
+  balance          Float    @default(0)
+  totalSpentUsdc   Float    @default(0)
+  totalChallengeUsdc Float  @default(0)
+  totalRewardsUsdc Float    @default(0)
+  createdAt        DateTime @default(now())
+
+  purchases  SignalPurchase[]
+  challenges Challenge[]
+}
+
+model Settlement {
+  id                    String   @id @default(uuid())
+  signalId              String   @unique
+  result                String   // SUCCESS, FAILED, EXPIRED
+  slashAmount           Float    @default(0)
+  buyerRefundPool       Float    @default(0)
+  buyerCompensationPool Float    @default(0)
+  challengerRewardPool  Float    @default(0)
+  protocolFee           Float    @default(0)
+  agentPayout           Float    @default(0) // bond + access fees + challenge stakes (on SUCCESS)
+  challengerLossPool    Float    @default(0) // total challenge stakes lost (on SUCCESS)
+  createdAt             DateTime @default(now())
+
+  signal Signal @relation(fields: [signalId], references: [id])
+}

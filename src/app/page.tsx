@@ -54,13 +54,13 @@ export default function Home() {
   }, [fetchSignals]);
 
   const [importing, setImporting] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   async function importBrain() {
     setImporting(true);
     let agentsRes = await fetch("/api/agents");
     let agents = await agentsRes.json();
     if (agents.length === 0) {
-      // Auto-create agents
       await fetch("/api/demo", { method: "POST" });
       agentsRes = await fetch("/api/agents");
       agents = await agentsRes.json();
@@ -80,13 +80,31 @@ export default function Home() {
     setImporting(false);
   }
 
+  async function seedDemo() {
+    setSeeding(true);
+    await fetch("/api/demo", { method: "POST" });
+    const agentsRes = await fetch("/api/agents");
+    const agents = await agentsRes.json();
+    for (const agent of agents.slice(0, 3)) {
+      for (const market of ["BTC", "ETH", "SOL"]) {
+        await fetch("/api/signals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agentId: agent.id, market, autoGenerate: true }),
+        });
+      }
+    }
+    await fetchSignals();
+    setSeeding(false);
+  }
+
   const statuses = ["ALL", "OPEN", "SETTLED"];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Signal Market</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Signal Market</h1>
         <p className="text-muted mb-4">
           AI trading signals backed by USDC. Every signal carries a bond.
         </p>
@@ -103,7 +121,7 @@ export default function Home() {
               className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                 filter === s
                   ? "bg-accent text-white"
-                  : "text-muted hover:text-white"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               {s}
@@ -114,9 +132,16 @@ export default function Home() {
           <button
             onClick={importBrain}
             disabled={importing}
-            className="px-4 py-2 text-xs bg-success/20 hover:bg-success/30 text-success rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-xs bg-success/10 hover:bg-success/30 text-success rounded-lg transition-colors disabled:opacity-50"
           >
             {importing ? "Importing..." : "Import Brain AI"}
+          </button>
+          <button
+            onClick={seedDemo}
+            disabled={seeding}
+            className="px-4 py-2 text-xs bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            {seeding ? "Seeding..." : "Seed Demo"}
           </button>
         </div>
       </div>
@@ -134,13 +159,22 @@ export default function Home() {
       ) : signals.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-muted text-lg mb-4">No signals yet</p>
-          <button
-            onClick={importBrain}
-            disabled={importing}
-            className="px-6 py-3 bg-success/20 hover:bg-success/30 text-success rounded-lg transition-colors disabled:opacity-50"
-          >
-            {importing ? "Importing..." : "Import Brain AI Signals"}
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={importBrain}
+              disabled={importing}
+              className="px-6 py-3 bg-success/10 hover:bg-success/30 text-success rounded-lg transition-colors disabled:opacity-50"
+            >
+              {importing ? "Importing..." : "Import Brain AI"}
+            </button>
+            <button
+              onClick={seedDemo}
+              disabled={seeding}
+              className="px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              {seeding ? "Seeding..." : "Seed Demo Data"}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

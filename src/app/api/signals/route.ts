@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateSignal } from "@/services/signal-engine";
 import { SUPPORTED_MARKETS } from "@/lib/constants";
+import { syncCreateSignal } from "@/services/arc/sync";
 
 // GET: List all signals
 export async function GET(req: NextRequest) {
@@ -106,5 +107,13 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(signal, { status: 201 });
+  // Create signal on-chain (agent bond locked via operator wallet)
+  const chainResult = await syncCreateSignal(
+    signal.id,
+    null,
+    signalData.bondAmount,
+    signalData.accessFee
+  );
+
+  return NextResponse.json({ ...signal, chainTxHash: chainResult.txHash }, { status: 201 });
 }
